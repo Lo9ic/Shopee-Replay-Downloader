@@ -48,6 +48,9 @@ def download_m3u8(record_id, output_dir='downloads', output_file='output.mp4'):
 
     media_lines = [line for line in lines if line.endswith('.ts')]
 
+    user_input_output_file = input("Enter the output file name (including extension, e.g., output.mp4): ")
+    output_file = user_input_output_file if user_input_output_file else 'output.mp4'
+
     with tqdm(total=len(media_lines), desc='Downloading segments') as pbar:
         for index, media_line in enumerate(media_lines):
             media_url = m3u8_url.rsplit('/', 1)[0] + '/' + media_line
@@ -71,6 +74,7 @@ def download_m3u8(record_id, output_dir='downloads', output_file='output.mp4'):
 
     print(f'Conversion complete. Output saved to: {output_path}')
 
+# Example usage
 user_input_session_id = input("Enter the session ID: ")
 record_ids = get_record_ids(user_input_session_id)
 
