@@ -9,25 +9,37 @@ def clear_ts_files(directory):
             file_path = os.path.join(directory, filename)
             os.remove(file_path)
 
-def get_m3u8_url(id):
-    replay_api_url = f'https://live.shopee.co.id/api/v1/replay/{id}'
+def get_record_ids(session_id):
+    replay_api_url = f'https://live.shopee.co.id/api/v1/replay?session_id={session_id}'
     response = requests.get(replay_api_url)
     data = response.json()
     
     if data.get('err_code') != 0:
-        print(f"Failed to retrieve replay information for ID: {id}")
+        print(f"Failed to retrieve replay information for session ID: {session_id}")
+        return None
+
+    record_ids = data.get('data', {}).get('record_ids', [])
+    return record_ids
+
+def get_m3u8_url(record_id):
+    replay_api_url = f'https://live.shopee.co.id/api/v1/replay/{record_id}'
+    response = requests.get(replay_api_url)
+    data = response.json()
+    
+    if data.get('err_code') != 0:
+        print(f"Failed to retrieve replay information for record ID: {record_id}")
         return None
 
     replay_info = data.get('data', {}).get('replay_info', {})
     return replay_info.get('record_url', '')
 
-def download_m3u8(id, output_dir='downloads', output_file='output.mp4'):
+def download_m3u8(record_id, output_dir='downloads', output_file='output.mp4'):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     clear_ts_files(output_dir)
 
-    m3u8_url = get_m3u8_url(id)
+    m3u8_url = get_m3u8_url(record_id)
     if not m3u8_url:
         return
 
@@ -35,9 +47,6 @@ def download_m3u8(id, output_dir='downloads', output_file='output.mp4'):
     lines = m3u8_content.split('\n')
 
     media_lines = [line for line in lines if line.endswith('.ts')]
-
-    user_input_output_file = input("Enter the output file name (including extension, e.g., output.mp4): ")
-    output_file = user_input_output_file if user_input_output_file else 'output.mp4'
 
     with tqdm(total=len(media_lines), desc='Downloading segments') as pbar:
         for index, media_line in enumerate(media_lines):
@@ -62,6 +71,9 @@ def download_m3u8(id, output_dir='downloads', output_file='output.mp4'):
 
     print(f'Conversion complete. Output saved to: {output_path}')
 
-# Example usage
-user_input_id = input("Enter the replay ID: ")
-download_m3u8(user_input_id)
+user_input_session_id = input("Enter the session ID: ")
+record_ids = get_record_ids(user_input_session_id)
+
+if record_ids:
+    for record_id in record_ids:
+        download_m3u8(record_id)
