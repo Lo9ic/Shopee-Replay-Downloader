@@ -1,7 +1,7 @@
 import requests
-import subprocess
 import os
 from tqdm import tqdm
+import ffmpeg
 
 def clear_ts_files(directory):
     for filename in os.listdir(directory):
@@ -13,7 +13,7 @@ def get_record_ids(session_id):
     replay_api_url = f'https://live.shopee.co.id/api/v1/replay?session_id={session_id}'
     response = requests.get(replay_api_url)
     data = response.json()
-    
+
     if data.get('err_code') != 0:
         print(f"Failed to retrieve replay information for session ID: {session_id}")
         return None
@@ -25,7 +25,7 @@ def get_m3u8_url(record_id):
     replay_api_url = f'https://live.shopee.co.id/api/v1/replay/{record_id}'
     response = requests.get(replay_api_url)
     data = response.json()
-    
+
     if data.get('err_code') != 0:
         print(f"Failed to retrieve replay information for record ID: {record_id}")
         return None
@@ -64,17 +64,19 @@ def download_m3u8(record_id, output_dir='downloads', output_file='output.mp4'):
         for index in range(len(media_lines)):
             f.write(f"file 'segment_{index}.ts'\n")
 
-    with tqdm(total=1, desc='Converting to MP4') as pbar:
-        output_path = os.path.join(output_dir, output_file)
-        subprocess.run(['ffmpeg', '-f', 'concat', '-safe', '0', '-i', concat_file_path, '-c', 'copy', output_path])
-        pbar.update(1)
+    output_path = os.path.join(output_dir, output_file)
+    
+    (
+        ffmpeg.input(concat_file_path, format='concat', safe=0)
+        .output(output_path, c='copy')
+        .run()
+    )
 
     for index in range(len(media_lines)):
         os.remove(os.path.join(output_dir, f'segment_{index}.ts'))
 
     print(f'Conversion complete. Output saved to: {output_path}')
 
-# Example usage
 user_input_session_id = input("Enter the session ID: ")
 record_ids = get_record_ids(user_input_session_id)
 
